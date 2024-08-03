@@ -1,6 +1,8 @@
 const dotenv = require('dotenv');
 const express = require('express');
 const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
 const router = require('./router/route');
 const AppError = require('./appError');
 const globalErrorHandler = require('./controller/errorController');
@@ -9,11 +11,27 @@ dotenv.config({ path: './config.env' });
 
 const app = express();
 
+// global middlewares
+// for setting security http headers
+app.use(helmet());
+
+// development logging
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-app.use(express.json());
+// limit requests from same ip
+const limiter = rateLimit({
+  max: 100,
+  windowMs: 60 * 60 * 1000,
+  message: 'too many request from this ip, please try again in an hour',
+});
+
+//should be called before all route with '/api'
+app.use('/api', limiter);
+
+// body parser,reading data from body into req.body
+app.use(express.json({ limit: '10kb' }));
 
 // app.use((req, res, next) => {
 //   res.send('hello from the backend');
